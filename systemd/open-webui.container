@@ -1,0 +1,24 @@
+[Unit]
+Description=Open WebUI Container
+After=network-online.target
+Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Container]
+ContainerName=open-webui
+Image=ghcr.io/open-webui/open-webui:main
+Environment=OLLAMA_BASE_URL=http://host.containers.internal:11434
+Environment=ANONYMIZED_TELEMTRY=False
+Volume=/opt/open-webui:/app/backend/data:Z
+Network=host
+AutoUpdate=registry
+Notify=false
+
+[Service]
+Restart=on-failure
+RestartSec=10
+Type=oneshot
+
+[Install]
+WantedBy=default.target

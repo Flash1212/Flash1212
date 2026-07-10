@@ -44,7 +44,8 @@ ollama pull qwen2.5-coder:14b
 - Rootless (but host networking) Podman Runtime Command:
 
 ```bash
-podman run -d \
+podman run \
+  --detach \
   --replace \
   --env 'OLLAMA_BASE_URL=http://localhost:11434' \
   -v /opt/open-webui:/app/backend/data:Z \
@@ -216,7 +217,6 @@ export OLLAMA_API_BASE=http://<DNS/IP>:11434
 ```pwsh
 $env:OLLAMA_API_BASE=http://<DNS/IP>:11434
 ```
-
 
 - Usage
 
