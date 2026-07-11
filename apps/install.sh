@@ -1,19 +1,64 @@
 #! /bin/bash
+set -eo pipefail
+
 # Ignore crlf when coding on windows for linux, I know the irony...
 # shellcheck disable=SC1017
 
+###################### helper functions ######################
+function help_response() {
+	local code="${1:-0}"
+	local notification
+
+	notification="$NOTICE"
+	if [[ "$code" -ne 0 ]]; then
+		notification="$WARN"
+	fi
+
+	echo -e "$notification Displaying help information..."
+	# Display help information here
+	echo "Usage: $0 [OPTIONS]"
+	echo "Options:"
+	echo "  --aider,   Install Aider"
+	echo "  --podman,  Install Podman"
+	echo "  --spotify, Install Spotify"
+	echo "  --steam,   Install Steam"
+	echo "    usage: $0 --aider --spotify"
+	echo "  -help, -h, -?, --help Display this help message"
+	exit "$code"
+}
+
+###################### Installer functions ######################
+# Function to install Aider
+#
+# serioustavern: [Aider](https://aider.chat/) is the OG open-source AI coding
+# assistant which inspired many other tools.
+# Installation instructions from: https://aider.chat/docs/install.html
+#################################################################
 function aider {
-	echo "Installing Aider ..."
+	echo "$NOTICE Installing Aider ..."
 
 	python -m pip install pipx  # If you need to install pipx
 	pipx install aider-install setuptools
 	aider-install
+
+	echo "$SUCCESS Installed Aider"
 }
 
-# Install Podman 5.3.0 on Kubuntu 24.04 LTS (Noble Numbat)
-# We must use APT pinning to pull the package from the newer Ubuntu 25.04
-# (Plucky) repository, as the official Noble repository only contains version
-# 4.9.3.
+#################################################################
+# Function to install Podman
+#
+# Podman (pod manager) is an open source Open Container Initiative
+# (OCI)-compliant container management tool created by Red Hat used for
+# handling containers, images, volumes, and pods on the Linux operating
+# system, with support for macOS and Microsoft Windows via a virtual machine.
+#
+# We're installing Podman 5.3.0 on Kubuntu 24.04 LTS (Noble Numbat) so we must
+# use APT pinning to pull the package from the newer Ubuntu 25.04 (Plucky)
+# repository, as the official Noble repository only contains version 4.9.3.
+#
+# I'm installing this version to avoid issues with quadlets not staying active
+# aster starting. Fixes I require came in 5.3.0.
+#################################################################
 function podman {
 	echo "Installing Podman ..."
 
@@ -41,17 +86,19 @@ function podman {
 	podman_apt_pinning
 
 	echo "Install Podman and some dependencies"
-	apt-get update && apt-get install -y \
+	sudo apt-get update && sudo apt-get install -y \
 		ca-certificates curl gnupg lsb-release software-properties-common
 
 	echo "Install Podman and some dependencies"
-	apt-get install -y podman.io
+	sudo apt-get install -y podman
 
-	echo "Podman installed successfully!"
+	echo "$SUCCESS Installed Podman"
 }
-
-# Install Spotify through Debian
+#################################################################
+# Function to install Spotify
+#
 # Source: https://www.spotify.com/us/download/linux/
+#################################################################
 function spotify {
 	echo "Installing Spotify dependencies..."
 
@@ -63,26 +110,42 @@ function spotify {
 
 	sudo apt-get update
 	sudo apt-get install -y spotify-client
+
+	echo "$SUCCESS Installed Spotify"
 }
 
-# Install Steam on Ubuntu with NVIDIA drivers
+#################################################################
+# Function to install Steam
+#
+# Steam  on Ubuntu with NVIDIA drivers
 # Source: https://linuxcapable.com/how-to-install-steam-on-ubuntu-linux/
+#################################################################
 function steam {
 	echo "Installing Steam dependencies..."
-	# Update package lists, upgrade existing packages, and install necessary dependencies for Steam
+	# Update package lists, upgrade existing packages, and install necessary
+	# dependencies for Steam
 	sudo apt-get update
 	# Upgrade existing packages to ensure compatibility and security
 	sudo apt-get upgrade -y
-	# Install essential dependencies for Steam, including support for 32-bit architecture and tools for managing software repositories
-	sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-	# Add support for 32-bit architecture, which is required for running many Steam games that are not available in 64-bit versions
-	sudo dpkg --add-architecture i386
+	# Install essential dependencies for Steam, including support for 32-bit
+	#architecture and tools for managing software repositories
+	sudo apt-get install -y \
+		apt-transport-https \
+		ca-certificates \
+		curl \
+		software-properties-common
+	# Add support for 32-bit architecture, which is required for running many
+	# Steam games that are not available in 64-bit versions
+	sudo dpkg \
+		--add-architecture i386
 	sudo apt-get update
 
 	echo "Installing Steam from the official Ubuntu repository..."
 
 	# Download and add the Steam GPG key to the system's keyring
-	sudo curl -fsSLo /usr/share/keyrings/steam.gpg https://repo.steampowered.com/steam/archive/stable/steam.gpg
+	sudo curl \
+		-fsSLo /usr/share/keyrings/steam.gpg \
+		https://repo.steampowered.com/steam/archive/stable/steam.gpg
 	sudo chmod 0644 /usr/share/keyrings/steam.gpg
 
 	# Add the Steam repository to the system's sources list
@@ -108,9 +171,72 @@ function steam {
 
 	# Verify that Steam was installed successfully by checking the package list
 	dpkg -l | grep steam
+
+	echo "$SUCCESS Installed Steam"
 }
 
-aider
-podman
-steam
-spotify
+
+###################### Color Codes ######################
+NC='\033[0m'
+
+GREEN='\033[0;32m'
+SUCCESS="${GREEN}[SUCCESS]:${NC}"
+
+BLUE='\033[0;34m'
+NOTICE="${BLUE}[NOTICE]:${NC}"
+
+RED='\033[0;31m'
+ERROR="${RED}[ERROR]:${NC}"
+
+YELLOW='\033[0;33m'
+WARN="${YELLOW}[WARNING]:${NC}"
+
+##################### Argument Variables ######################
+AIDER=false
+PODMAN=false
+SPOTIFY=false
+STEAM=false
+HELP=false
+##################### Argument Parsing ######################
+while [[ $# -gt 0 ]]; do
+	case "$1" in
+	--aider)
+		AIDER=true
+		shift
+		;;
+	--podman)
+		PODMAN=true
+		shift
+		;;
+	--spotify)
+		SPOTIFY=true
+		shift
+		;;
+	--steam)
+		STEAM=true
+		shift
+		;;
+	--help | -help | -h | -?)
+		HELP=true
+		break
+		;;
+	*)
+		echo -e "$ERROR Unknown command/flag: $1"
+		help_response 1
+		;;
+	esac
+done
+##################### Argument Parsing ######################
+
+if [[ "$HELP" == true ]]; then
+	help_response
+fi
+
+if ! "$AIDER" && ! "$PODMAN" && ! "$SPOTIFY" && ! "$STEAM"; then
+	help_response 1
+fi
+
+if [[ "$AIDER" == true ]]; then aider; fi
+if [[ "$PODMAN" == true ]]; then podman; fi
+if [[ "$SPOTIFY" == true ]]; then steam; fi
+if [[ "$STEAM" == true ]]; then spotify; fi
