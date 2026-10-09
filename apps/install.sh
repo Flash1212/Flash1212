@@ -1,23 +1,30 @@
 #! /bin/bash
-set -euo pipefail
+set -eo pipefail
 
 # Ignore crlf when coding on windows for linux, I know the irony...
 # shellcheck disable=SC1017
 
 ###################### helper functions ######################
 function help_response() {
-		local code="${1:-0}"
-		echo -e "$NOTICE Displaying help information..."
-		# Display help information here
-		echo "Usage: $0 [OPTIONS]"
-		echo "Options:"
-		echo "  --aider,   Install Aider"
-		echo "  --podman,  Install Podman"
-		echo "  --spotify, Install Spotify"
-		echo "  --steam,   Install Steam"
-		echo "    usage: --aider --spotify"
-		echo "  -help, -h, -?, --help Display this help message"
-		exit "$code"
+	local code="${1:-0}"
+	local notification
+
+	notification="$NOTICE"
+	if [[ "$code" -ne 0 ]]; then
+		notification="$WARN"
+	fi
+
+	echo -e "$notification Displaying help information..."
+	# Display help information here
+	echo "Usage: $0 [OPTIONS]"
+	echo "Options:"
+	echo "  --aider,   Install Aider"
+	echo "  --podman,  Install Podman"
+	echo "  --spotify, Install Spotify"
+	echo "  --steam,   Install Steam"
+	echo "    usage: $0 --aider --spotify"
+	echo "  -help, -h, -?, --help Display this help message"
+	exit "$code"
 }
 
 ###################### Installer functions ######################
@@ -79,11 +86,11 @@ function podman {
 	podman_apt_pinning
 
 	echo "Install Podman and some dependencies"
-	apt-get update && apt-get install -y \
+	sudo apt-get update && sudo apt-get install -y \
 		ca-certificates curl gnupg lsb-release software-properties-common
 
 	echo "Install Podman and some dependencies"
-	apt-get install -y podman.io
+	sudo apt-get install -y podman
 
 	echo "$SUCCESS Installed Podman"
 }
@@ -122,7 +129,7 @@ function steam {
 	sudo apt-get upgrade -y
 	# Install essential dependencies for Steam, including support for 32-bit
 	#architecture and tools for managing software repositories
-	sudo apt-get install-y \
+	sudo apt-get install -y \
 		apt-transport-https \
 		ca-certificates \
 		curl \
@@ -192,43 +199,44 @@ STEAM=false
 HELP=false
 ##################### Argument Parsing ######################
 while [[ $# -gt 0 ]]; do
-		case "$1" in
-		--aider)
-				AIDER=true
-				shift
-				;;
-		--podman)
-				PODMAN=true
-				shift
-				;;
-		--spotify)
-				SPOTIFY=true
-				shift
-				;;
-		--steam)
-				STEAM=true
-				shift
-				;;
-		--help | -help | -h | -?)
-				HELP=true
-				break
-				;;
-		*)
-				echo -e "$ERROR Unknown command/flag: $1"
-				help_response 1
-				;;
-		esac
+	case "$1" in
+	--aider)
+		AIDER=true
+		shift
+		;;
+	--podman)
+		PODMAN=true
+		shift
+		;;
+	--spotify)
+		SPOTIFY=true
+		shift
+		;;
+	--steam)
+		STEAM=true
+		shift
+		;;
+	--help | -help | -h | -?)
+		HELP=true
+		break
+		;;
+	*)
+		echo -e "$ERROR Unknown command/flag: $1"
+		help_response 1
+		;;
+	esac
 done
 ##################### Argument Parsing ######################
 
 if [[ "$HELP" == true ]]; then
-		help_response
+	help_response
+fi
+
+if ! "$AIDER" && ! "$PODMAN" && ! "$SPOTIFY" && ! "$STEAM"; then
+	help_response 1
 fi
 
 if [[ "$AIDER" == true ]]; then aider; fi
 if [[ "$PODMAN" == true ]]; then podman; fi
 if [[ "$SPOTIFY" == true ]]; then steam; fi
 if [[ "$STEAM" == true ]]; then spotify; fi
-
-
-

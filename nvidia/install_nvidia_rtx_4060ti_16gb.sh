@@ -85,6 +85,16 @@ function install_nvidia_dependencies() {
 function install_nvidia_drivers() {
   echo "Installing recommended NVIDIA drivers..."
   sudo ubuntu-drivers autoinstall
+  # Override with DKMS variant so future kernel updates self-heal
+  DRIVER_VER=$(ubuntu-drivers devices 2>/dev/null |
+    grep -oP 'driver: \K[0-9]+' |
+    head -1
+  )
+  if [[ -n "$DRIVER_VER" ]]; then
+    echo "Switching to DKMS variant (driver ${DRIVER_VER})..."
+    sudo apt install -y "nvidia-dkms-${DRIVER_VER}" "nvidia-driver-${DRIVER_VER}"
+    sudo dkms autoinstall
+  fi
 }
 
 function validate_nvidia_installation() {
